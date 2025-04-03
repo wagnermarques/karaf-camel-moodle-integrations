@@ -1,0 +1,31 @@
+# ./ .env file
+
+#---- General ----
+# Set timezone for PHP container and potentially others
+TZ=America/Sao_Paulo
+
+#---- Nginx ----
+# Port Nginx will be exposed on the HOST machine
+NGINX_HOST_PORT=8080
+
+#---- PHP ----
+# Application specific ENV vars can go here if needed
+
+#---- PostgreSQL Credentials ----
+# Change these default values!
+POSTGRES_DB=fzleduc
+POSTGRES_USER=fzleduc
+POSTGRES_PASSWORD=a_very_secret_pg_password # <-- CHANGE ME
+
+# Port PostgreSQL will be exposed on the HOST machine (optional)
+POSTGRES_HOST_PORT=5432
+
+#---- MariaDB Credentials ----
+# Change these default values!
+MARIADB_DATABASE=myappdb_maria
+MARIADB_USER=myappuser_maria
+MARIADB_PASSWORD=a_very_secret_maria_password # <-- CHANGE ME
+MARIADB_ROOT_PASSWORD=a_super_secret_maria_root_password # <-- CHANGE ME
+
+# Port MariaDB will be exposed on the HOST machine (optional)
+MARIADB_HOST_PORT=3306

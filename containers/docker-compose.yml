@@ -1,0 +1,141 @@
+# ./docker-compose.yml
+
+services:
+  # Nginx Web Server Service
+  fzleduc-nginx:
+    build:
+      context: ./nginx # Path to the directory containing the Dockerfile
+      # args: # Optional build arguments for Dockerfile
+      #   NGINX_VERSION: latest
+    container_name: fzl-nginx
+    ports:
+      # Use variable substitution from .env file, default to 8080 if not set
+      - "${NGINX_HOST_PORT:-8080}:80"
+      - "443:443" # Uncomment for HTTPS
+    volumes:
+      # Mount application code from php-fpm/src into Nginx container
+      # Nginx needs access to static files directly
+      - ./../projects/htdocs:/var/www/html:ro # Mount read-only is safer for nginx
+      # Optional: Mount nginx config for live changes without rebuild (useful in dev)
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # Optional: Persistent logs
+      - ./../logs/nginx:/var/log/nginx
+    depends_on:
+      - fzleduc-php-fpm # Ensure PHP-FPM is running before Nginx starts
+    networks:
+      - fzleduc-network
+    restart: unless-stopped
+
+  # PHP-FPM Service
+  fzleduc-php-fpm:
+    build:
+      context: ./php-fpm
+      # args:
+      #   PHP_VERSION: 8.1 # Example: Override PHP version via args
+    container_name: fzleduc-php-fpm
+    volumes:
+      # Mount the application source code for development (changes reflected immediately)
+      - ./../projects/htdocs:/var/www/html:rw # Read-write needed for PHP
+      # Optional: Mount php.ini for live changes without rebuild
+      - ./php-fpm/php.ini:/usr/local/etc/php/conf.d/custom-php.ini:ro
+    networks:
+      - fzleduc-network
+    depends_on:
+      # Optional: Start databases before PHP if needed for startup logic/migrations
+       db_postgres:
+         condition: service_healthy # Wait for DB to be ready
+       db_mariadb:
+         condition: service_healthy # Wait for DB to be ready
+    environment:
+      # Pass database connection details and other ENV vars to PHP
+      TZ: ${TZ:-UTC} # Timezone
+      # PostgreSQL
+      DB_POSTGRES_HOST: db_postgres
+      DB_POSTGRES_PORT: 5432
+      DB_POSTGRES_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRES_USER: ${POSTGRES_USER}
+      DB_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # MariaDB
+      DB_MARIADB_HOST: db_mariadb
+      DB_MARIADB_PORT: 3306
+      DB_MARIADB_DATABASE: ${MARIADB_DATABASE}
+      DB_MARIADB_USER: ${MARIADB_USER}
+      DB_MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      # Add any other ENV vars your application needs
+      # APP_ENV: development
+    restart: unless-stopped
+
+  # PostgreSQL Database Service
+  db_postgres:
+    build:
+      context: ./postgresql
+      # args:
+      #   POSTGRES_VERSION: 16-alpine # Example: Override PG version
+    container_name: postgresql
+    environment:
+      TZ: ${TZ:-UTC}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Persistent data storage using a named volume
+      - postgres_data:/var/lib/postgresql/data
+      # Mount init scripts (run only on first start with empty data volume)
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Optional: Expose to host for external tools, use variable from .env
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    networks:
+      - fzleduc-network
+    healthcheck: # Checks if Postgres is ready to accept connections
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # Give postgres time to initialize
+    restart: unless-stopped
+
+  # MariaDB Database Service
+  db_mariadb:
+    build:
+      context: ./mariadb
+      # args:
+      #   MARIADB_VERSION: latest
+    container_name: mariadb
+    environment:
+      TZ: ${TZ:-UTC}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD} # Required by MariaDB image
+    volumes:
+      # Persistent data storage using a named volume
+      - mariadb_data:/var/lib/mysql
+      # Mount init scripts (run only on first start with empty data volume)
+      - ./mariadb/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Optional: Expose to host for external tools, use variable from .env
+      - "${MARIADB_HOST_PORT:-3306}:3306"
+    networks:
+      - fzleduc-network
+    healthcheck: # Checks if MariaDB is ready
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+# Define Networks
+networks:
+  fzleduc-network:
+    driver: bridge # Default Docker network driver
+
+# Define Named Volumes for Data Persistence
+volumes:
+  postgres_data:
+    driver: local
+  mariadb_data:
+    driver: local
+  # nginx_logs: # Uncomment if using the nginx log volume mount
+  #   driver: local
