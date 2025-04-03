@@ -9,23 +9,39 @@ WORKDIR /var/www/html
 # pdo_pgsql for PostgreSQL, pdo_mysql for MariaDB/MySQL
 # You might need others like: gd, intl, zip, bcmath, soap, etc.
 # Add build dependencies, install extensions, then remove dependencies
-RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS postgresql-dev mariadb-dev \
-    && docker-php-ext-install pdo pdo_pgsql pdo_mysql \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .build-deps
+
+# Update package index
+#RUN sed -i 's/dl-cdn.alpinelinux.org/mirror.ufscar.br.alpinelinux.org/' /etc/apk/repositories
+RUN apk update
+
+# Install build dependencies
+#RUN apk add postgresql-dev mariadb-dev libzip-dev libpng-dev libjpeg-dev freetype-dev libldap aspell
+
+#RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS 
+
+# Configure gd extension
+#RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+
+# Install core PHP extensions
+#RUN docker-php-ext-install pdo pdo_pgsql pdo_mysql curl gd intl mbstring opcache pcntl sodium tokenizer xmlrpc zip bcmath soap ldap exif xsl
+
+# Install PECL extensions
+#RUN pecl install redis imagick enchant gmp tidy
+
+# Enable PECL extensions
+#RUN docker-php-ext-enable redis imagick enchant gmp tidy
+
+# Remove build dependencies
+#RUN apk del .build-deps
 
 # Install composer (Optional but common)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy custom php.ini settings
-# These settings will be loaded *after* the main php.ini
 COPY php.ini /usr/local/etc/php/conf.d/custom-php.ini
-
-# Optional: Set permissions if needed, although mounting src often handles this
-# RUN chown -R www-data:www-data /var/www/html
 
 # Expose port 9000 for FastCGI communication
 EXPOSE 9000
 
 # The base PHP-FPM image defines the CMD ["php-fpm"]
+

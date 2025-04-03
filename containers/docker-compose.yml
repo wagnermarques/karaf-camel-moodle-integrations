@@ -7,7 +7,7 @@ services:
       context: ./nginx # Path to the directory containing the Dockerfile
       # args: # Optional build arguments for Dockerfile
       #   NGINX_VERSION: latest
-    container_name: fzl-nginx
+    container_name: fzleduc-nginx
     ports:
       # Use variable substitution from .env file, default to 8080 if not set
       - "${NGINX_HOST_PORT:-8080}:80"
@@ -17,7 +17,7 @@ services:
       # Nginx needs access to static files directly
       - ./../projects/htdocs:/var/www/html:ro # Mount read-only is safer for nginx
       # Optional: Mount nginx config for live changes without rebuild (useful in dev)
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d
       # Optional: Persistent logs
       - ./../logs/nginx:/var/log/nginx
     depends_on:
@@ -32,6 +32,9 @@ services:
       context: ./php-fpm
       # args:
       #   PHP_VERSION: 8.1 # Example: Override PHP version via args
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     container_name: fzleduc-php-fpm
     volumes:
       # Mount the application source code for development (changes reflected immediately)
