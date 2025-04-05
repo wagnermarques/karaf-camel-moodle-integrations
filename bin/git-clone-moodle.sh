@@ -1,15 +1,17 @@
 #!/bin/bash
 
+# --- base directory for projects---
+PROJECTS_DIR="../projects"
+
+# git clone target directory relative to the script's execution location
+TARGET_DIR="$PROJECTS_DIR/htdocs/lms"
+mkdir -p "$TARGET_DIR"
+
 # --- Configuration ---
 MOODLE_REPO="https://github.com/moodle/moodle.git"
 
 # Log file relative to the script's execution location
-LOG_FILE="../projects/moodle_clone.log"
-
-PROJECTS_DIR="../projects"
-
-TARGET_DIR="$PROJECTS_DIR/htdocs/lms"
-
+LOG_FILE="../projects/moodle_clone_script.log"
 
 
 # --- Pre-flight Checks ---
@@ -21,7 +23,7 @@ if ! command -v git &> /dev/null; then
 fi
 
 # --- Determine Latest Stable Moodle Tag ---
-
+#+TODO: fix a stable tag for production use (not latest)
 echo "Fetching latest stable Moodle tags from $MOODLE_REPO..."
 # Get tags, sort by version descending, filter for stable vX.Y.Z format, get the top one
 LATEST_STABLE_TAG=$(git ls-remote --tags --refs --sort='-v:refname' "$MOODLE_REPO" \
@@ -41,12 +43,11 @@ echo "Latest stable Moodle tag found: $LATEST_STABLE_TAG"
 
 # --- Prepare Target Directory ---
 
-# Create the parent projects directory if it doesn't exist
-mkdir -p "$PROJECTS_DIR"
-if [ $? -ne 0 ]; then
-    echo "Error: Could not create directory '$PROJECTS_DIR'." >&2
-    exit 1
+# Detect if the $PROJECTS_DIR exists
+if [ ! -d "$PROJECTS_DIR" ]; then
+    echo "Warning: Directory '$PROJECTS_DIR' does not exist. Creating it for continue."
 fi
+
 
 # Check if the target directory exists and is not empty
 if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR")" ]; then
@@ -57,7 +58,6 @@ elif [ -e "$TARGET_DIR" ] && [ ! -d "$TARGET_DIR" ]; then
      echo "Error: '$TARGET_DIR' exists but is not a directory." >&2
      exit 1
 fi
-
 
 
 # --- Clone Moodle ---
