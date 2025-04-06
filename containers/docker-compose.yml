@@ -30,8 +30,8 @@ services:
   fzleduc-php-fpm:
     build:
       context: ./php-fpm
-      # args:
-      #   PHP_VERSION: 8.1 # Example: Override PHP version via args
+      args:
+        PHP_VERSION: 8.3 # Example: Override PHP version via args
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -50,24 +50,22 @@ services:
        db_mariadb:
          condition: service_healthy # Wait for DB to be ready
     environment:
-      # Pass database connection details and other ENV vars to PHP
-      TZ: ${TZ:-UTC} # Timezone
+      TZ: ${TZ:-UTC} # Timezone (also set as ARG for build)
       # PostgreSQL
-      DB_POSTGRES_HOST: db_postgres
-      DB_POSTGRES_PORT: 5432
+      DB_POSTGRES_HOST: ${DB_POSTGRES_HOST:-db_postgres}
+      DB_POSTGRES_PORT: ${DB_POSTGRES_PORT:-5432}
       DB_POSTGRES_DATABASE: ${POSTGRES_DB}
       DB_POSTGRES_USER: ${POSTGRES_USER}
       DB_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # MariaDB
-      DB_MARIADB_HOST: db_mariadb
-      DB_MARIADB_PORT: 3306
+      DB_MARIADB_HOST: ${DB_MARIADB_HOST:-db_mariadb}
+      DB_MARIADB_PORT: ${DB_MARIADB_PORT:-3306}
       DB_MARIADB_DATABASE: ${MARIADB_DATABASE}
       DB_MARIADB_USER: ${MARIADB_USER}
       DB_MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       # Add any other ENV vars your application needs
       # APP_ENV: development
     restart: unless-stopped
-
   # PostgreSQL Database Service
   db_postgres:
     build:

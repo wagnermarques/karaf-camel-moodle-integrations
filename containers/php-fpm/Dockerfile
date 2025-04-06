@@ -2,6 +2,34 @@
 ARG PHP_VERSION=8.2
 FROM php:${PHP_VERSION}-fpm-alpine
 
+
+# Define build arguments for environment variables
+ARG TZ
+ARG DB_POSTGRES_HOST
+ARG DB_POSTGRES_PORT
+ARG DB_POSTGRES_DATABASE
+ARG DB_POSTGRES_USER
+ARG DB_POSTGRES_PASSWORD
+ARG DB_MARIADB_HOST
+ARG DB_MARIADB_PORT
+ARG DB_MARIADB_DATABASE
+ARG DB_MARIADB_USER
+ARG DB_MARIADB_PASSWORD
+
+
+# Set environment variables (these will be available at runtime)
+ENV TZ=${TZ:-UTC}
+ENV DB_POSTGRES_HOST=${DB_POSTGRES_HOST:-db_postgres}
+ENV DB_POSTGRES_PORT=${DB_POSTGRES_PORT:-5432}
+ENV DB_POSTGRES_DATABASE=${DB_POSTGRES_DATABASE}
+ENV DB_POSTGRES_USER=${DB_POSTGRES_USER}
+ENV DB_POSTGRES_PASSWORD=${DB_POSTGRES_PASSWORD}
+ENV DB_MARIADB_HOST=${DB_MARIADB_HOST:-db_mariadb}
+ENV DB_MARIADB_PORT=${DB_MARIADB_PORT:-3306}
+ENV DB_MARIADB_DATABASE=${DB_MARIADB_DATABASE}
+ENV DB_MARIADB_USER=${DB_MARIADB_USER}
+ENV DB_MARIADB_PASSWORD=${DB_MARIADB_PASSWORD}
+
 # Set working directory
 WORKDIR /var/www/html
 
@@ -14,25 +42,63 @@ WORKDIR /var/www/html
 #RUN sed -i 's/dl-cdn.alpinelinux.org/mirror.ufscar.br.alpinelinux.org/' /etc/apk/repositories
 RUN apk update
 
-# Install build dependencies
-#RUN apk add postgresql-dev mariadb-dev libzip-dev libpng-dev libjpeg-dev freetype-dev libldap aspell
 
-#RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS 
+# Install build dependencies required for PHP extensions
+RUN apk add --no-cache \
+    libjpeg-turbo \
+    libgomp \
+    curl \
+    libcurl \
+    curl-dev \
+    postgresql-dev \ 
+    mariadb-dev \
+    libpng-dev \
+    freetype-dev \
+    tidyhtml-dev \        
+    libzip-dev \
+    libldap \
+    aspell \
+    oniguruma-dev \ 
+    oniguruma \
+    libsodium \
+    libsodium-dev \
+    libxml2-dev \
+    libzip \
+    libzip-dev \
+    libpng \
+    libjpeg-turbo \
+    libjpeg-turbo-dev \
+    freetype \
+    freetype-dev \
+    libpng \
+    libpng-dev \
+    libxslt-dev \
+    libxml2-dev \
+    imagemagick-dev \
+    imagemagick 
 
-# Configure gd extension
-#RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+#RUN apk add --no-cache --virtual .build-deps  $PHPIZE_DEPS 
+    
 
-# Install core PHP extensions
-#RUN docker-php-ext-install pdo pdo_pgsql pdo_mysql curl gd intl mbstring opcache pcntl sodium tokenizer xmlrpc zip bcmath soap ldap exif xsl
-
-# Install PECL extensions
-#RUN pecl install redis imagick enchant gmp tidy
-
-# Enable PECL extensions
-#RUN docker-php-ext-enable redis imagick enchant gmp tidy
-
-# Remove build dependencies
-#RUN apk del .build-deps
+# Configure and install essential and common PHP extensions for Moodle
+#RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
+RUN docker-php-ext-configure gd --with-freetype && \
+    docker-php-ext-install -j "$(nproc)" \
+    pdo \
+    pdo_pgsql \
+    pdo_mysql \
+    tidy  \
+    curl \
+    gd \
+    intl \
+    mbstring \
+    opcache \
+    pcntl \
+    sodium \
+    zip \
+    bcmath \
+    exif \
+    xsl
 
 # Install composer (Optional but common)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
