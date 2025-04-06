@@ -1,7 +1,14 @@
 # ./docker-compose.yml
 
 services:
-  # Nginx Web Server Service
+  init-permissions:
+    image: alpine # A lightweight image with common tools
+    volumes:
+      - moodledata:/data
+    command: "chown -R 33:33 /data"
+    user: root # Need root to chown
+    depends_on: [] # Or any service that needs the volume later
+
   fzleduc-nginx:
     build:
       context: ./nginx # Path to the directory containing the Dockerfile
@@ -26,12 +33,11 @@ services:
       - fzleduc-network
     restart: unless-stopped
 
-  # PHP-FPM Service
   fzleduc-php-fpm:
     build:
       context: ./php-fpm
       args:
-        PHP_VERSION: 8.3 # Example: Override PHP version via args
+        PHP_VERSION: 8.1 # Example: Override PHP version via args
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -41,14 +47,17 @@ services:
       - ./../projects/htdocs:/var/www/html:rw # Read-write needed for PHP
       # Optional: Mount php.ini for live changes without rebuild
       - ./php-fpm/php.ini:/usr/local/etc/php/conf.d/custom-php.ini:ro
+      - moodledata:/var/www/moodledata      
+    user: www-data:www-data
     networks:
       - fzleduc-network
     depends_on:
-      # Optional: Start databases before PHP if needed for startup logic/migrations
-       db_postgres:
-         condition: service_healthy # Wait for DB to be ready
-       db_mariadb:
-         condition: service_healthy # Wait for DB to be ready
+      init-permissions:
+        condition: service_completed_successfully
+      db_postgres:
+        condition: service_healthy # Wait for DB to be ready
+      db_mariadb:
+        condition: service_healthy # Wait for DB to be ready      
     environment:
       TZ: ${TZ:-UTC} # Timezone (also set as ARG for build)
       # PostgreSQL
@@ -134,9 +143,10 @@ networks:
 
 # Define Named Volumes for Data Persistence
 volumes:
+  moodledata:
+    driver: local  
   postgres_data:
     driver: local
   mariadb_data:
     driver: local
-  # nginx_logs: # Uncomment if using the nginx log volume mount
-  #   driver: local
+
